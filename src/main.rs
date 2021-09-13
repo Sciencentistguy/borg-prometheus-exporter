@@ -51,7 +51,7 @@ async fn read_repo_info(repo_path: &Path, writer: &mut impl Write) -> Result<()>
         .timestamp();
 
     writeln!(writer, "# HELP borg_total_chunks borg-prometheus-exporter")?;
-    writeln!(writer, "# TYPE borg_total_chunks guage")?;
+    writeln!(writer, "# TYPE borg_total_chunks gauge")?;
     writeln!(
         writer,
         "borg_total_chunks{{repository=\"{}\"}} {}",
@@ -59,7 +59,7 @@ async fn read_repo_info(repo_path: &Path, writer: &mut impl Write) -> Result<()>
     )?;
 
     writeln!(writer, "# HELP borg_total_csize borg-prometheus-exporter")?;
-    writeln!(writer, "# TYPE borg_total_csize guage")?;
+    writeln!(writer, "# TYPE borg_total_csize gauge")?;
     writeln!(
         writer,
         "borg_total_csize{{repository=\"{}\"}} {}",
@@ -67,7 +67,7 @@ async fn read_repo_info(repo_path: &Path, writer: &mut impl Write) -> Result<()>
     )?;
 
     writeln!(writer, "# HELP borg_total_size borg-prometheus-exporter")?;
-    writeln!(writer, "# TYPE borg_total_size guage")?;
+    writeln!(writer, "# TYPE borg_total_size gauge")?;
     writeln!(
         writer,
         "borg_total_size{{repository=\"{}\"}} {}",
@@ -78,7 +78,7 @@ async fn read_repo_info(repo_path: &Path, writer: &mut impl Write) -> Result<()>
         writer,
         "# HELP borg_total_unique_chunks borg-prometheus-exporter"
     )?;
-    writeln!(writer, "# TYPE borg_total_unique_chunks guage")?;
+    writeln!(writer, "# TYPE borg_total_unique_chunks gauge")?;
     writeln!(
         writer,
         "borg_total_unique_chunks{{repository=\"{}\"}} {}",
