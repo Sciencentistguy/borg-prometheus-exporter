@@ -1,9 +1,11 @@
 [package]
 name = "borg-prometheus-exporter"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2018"
 authors = ["Jamie Quigley <jamie@quigley.xyz>"]
 license = "MPL-2.0"
+description = "A Prometheus exporter for borg repositories"
+repository = "https://github.com/Sciencentistguy/borg-prometheus-exporter"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
