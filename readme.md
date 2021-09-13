@@ -12,10 +12,10 @@ This program runs an http server, which Prometheus then polls. An example Promet
 
 ```yml
 scrape_configs:
-  - job_name: "minecraft"
+  - job_name: "borg"
     scrape_timeout: 30s
     static_configs:
-      - targets: ["localhost::9001"]
+      - targets: ["localhost::9002"]
 ```
 
 ---
