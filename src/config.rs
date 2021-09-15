@@ -8,7 +8,7 @@ use tracing::*;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
     pub port: u16,
-    pub repositories: Vec<PathBuf>
+    pub repositories: Vec<PathBuf>,
 }
 
 impl Config {

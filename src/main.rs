@@ -2,9 +2,10 @@ mod config;
 
 use std::path::PathBuf;
 use std::process::Command;
+use std::time::Duration;
 use std::{fmt::Write, path::Path};
 
-use chrono::NaiveDateTime;
+use chrono::{Local, NaiveDateTime, TimeZone};
 use eyre::Context;
 use eyre::Result;
 use once_cell::sync::Lazy;
@@ -35,20 +36,48 @@ async fn read_repo_info(repo_path: &Path, writer: &mut impl Write) -> Result<()>
     info!(?repo_path, "Reading repo info");
     let mut command = Command::new("borg");
     command.arg("info").arg("--json").arg(repo_path.as_os_str());
-    let output = command.output().wrap_err("Failed to run command")?.stdout;
-    let x = std::str::from_utf8(&output)?;
+    let stdout = loop {
+        let output = command.output().wrap_err("Failed to run command")?;
+        if output.status.success() {
+            break output.stdout;
+        } else if output
+            .stderr
+            .starts_with("Failed to create/acquire the lock".as_bytes())
+        {
+            info!("The repo is busy. Retrying in 30s");
+            tokio::time::sleep(Duration::from_secs(30)).await;
+        } else {
+            return Err(eyre::eyre!(
+                "Borg info command failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ));
+        }
+    };
 
-    info!(output = %x, "Got command output from borg");
+    info!(output = %std::str::from_utf8(&stdout)?, "Got command output from borg");
 
-    let repo_info: parse::BorgResponse = serde_json::from_slice(&output)
+    let repo_info: parse::BorgResponse = serde_json::from_slice(&stdout)
         .wrap_err("Failed to parse response from `borg info --json`")?;
-    let trimmed_timestamp = &repo_info.repository.last_modified
-        [..repo_info.repository.last_modified.find('.').unwrap()];
+    let trimmed_timestamp = &repo_info.repository.last_modified[..repo_info
+        .repository
+        .last_modified
+        .find('.')
+        .ok_or_else(|| {
+            eyre::eyre!(
+                "Expected a `.` in the timestamp: {}",
+                repo_info.repository.last_modified
+            )
+        })?];
 
     info!(timestamp = %trimmed_timestamp);
-    let last_modified = NaiveDateTime::parse_from_str(trimmed_timestamp, "%Y-%m-%dT%H:%M:%S")
-        .wrap_err("Failed to parse timestamp")?
-        .timestamp();
+    let localtime = NaiveDateTime::parse_from_str(trimmed_timestamp, "%Y-%m-%dT%H:%M:%S")
+        .wrap_err("Failed to parse timestamp")?;
+    let actual_time = Local
+        .from_local_datetime(&localtime)
+        .single()
+        .ok_or_else(|| eyre::eyre!("Failed to convert from local time to UTC"))?;
+
+    let last_modified = actual_time.timestamp();
 
     writeln!(writer, "# HELP borg_total_chunks borg-prometheus-exporter")?;
     writeln!(writer, "# TYPE borg_total_chunks gauge")?;
