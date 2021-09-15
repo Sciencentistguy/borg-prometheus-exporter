@@ -27,15 +27,17 @@ static CONFIG: Lazy<Config> = Lazy::new(|| {
 mod parse;
 
 async fn read_repo_info(repo_path: &Path, writer: &mut impl Write) -> Result<()> {
+    trace!(?repo_path, "Reading repo info");
+
     let repo_name = repo_path
         .file_name()
         .ok_or_else(|| eyre::eyre!("Invalid repo path: {:?}", repo_path))?
         .to_str()
         .ok_or_else(|| eyre::eyre!("Invalid utf-8 in repo name"))?;
 
-    info!(?repo_path, "Reading repo info");
     let mut command = Command::new("borg");
     command.arg("info").arg("--json").arg(repo_path.as_os_str());
+
     let stdout = loop {
         let output = command.output().wrap_err("Failed to run command")?;
         if output.status.success() {
@@ -44,8 +46,8 @@ async fn read_repo_info(repo_path: &Path, writer: &mut impl Write) -> Result<()>
             .stderr
             .starts_with("Failed to create/acquire the lock".as_bytes())
         {
-            info!("The repo is busy. Retrying in 30s");
-            tokio::time::sleep(Duration::from_secs(30)).await;
+            warn!("The repo is busy. Retrying in 5s");
+            tokio::time::sleep(Duration::from_secs(5)).await;
         } else {
             return Err(eyre::eyre!(
                 "Borg info command failed: {}",
@@ -54,7 +56,7 @@ async fn read_repo_info(repo_path: &Path, writer: &mut impl Write) -> Result<()>
         }
     };
 
-    info!(output = %std::str::from_utf8(&stdout)?, "Got command output from borg");
+    debug!(output = %std::str::from_utf8(&stdout)?, "`borg info` returned successfully");
 
     let repo_info: parse::BorgResponse = serde_json::from_slice(&stdout)
         .wrap_err("Failed to parse response from `borg info --json`")?;
@@ -69,7 +71,6 @@ async fn read_repo_info(repo_path: &Path, writer: &mut impl Write) -> Result<()>
             )
         })?];
 
-    info!(timestamp = %trimmed_timestamp);
     let localtime = NaiveDateTime::parse_from_str(trimmed_timestamp, "%Y-%m-%dT%H:%M:%S")
         .wrap_err("Failed to parse timestamp")?;
     let actual_time = Local
@@ -78,6 +79,8 @@ async fn read_repo_info(repo_path: &Path, writer: &mut impl Write) -> Result<()>
         .ok_or_else(|| eyre::eyre!("Failed to convert from local time to UTC"))?;
 
     let last_modified = actual_time.timestamp();
+
+    debug!(?repo_info, %last_modified, "Parsed response");
 
     writeln!(writer, "# HELP borg_total_chunks borg-prometheus-exporter")?;
     writeln!(writer, "# TYPE borg_total_chunks gauge")?;
@@ -138,6 +141,8 @@ async fn read_repo_info(repo_path: &Path, writer: &mut impl Write) -> Result<()>
         repo_name, last_modified
     )?;
 
+    trace!("Wrote prometheus output");
+
     Ok(())
 }
 
@@ -145,7 +150,7 @@ async fn read_repo_info(repo_path: &Path, writer: &mut impl Write) -> Result<()>
 async fn main() -> Result<()> {
     tracing::subscriber::set_global_default(
         tracing_subscriber::FmtSubscriber::builder()
-            .with_max_level(Level::TRACE)
+            .with_max_level(Level::INFO)
             .pretty()
             .finish(),
     )?;
@@ -168,10 +173,12 @@ async fn main() -> Result<()> {
             })?;
         }
 
+        info!(%output, "Successfully generated prometheus output");
+
         Ok(output)
     });
 
-    info!(port = %CONFIG.port, "Started listening.");
+    info!(port = %CONFIG.port, "Started listening");
     warp::serve(filter).run(([127, 0, 0, 1], CONFIG.port)).await;
     Ok(())
 }
