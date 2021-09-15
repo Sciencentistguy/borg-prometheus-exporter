@@ -1,6 +1,6 @@
 [package]
 name = "borg-prometheus-exporter"
-version = "1.1.0"
+version = "1.2.0"
 edition = "2018"
 authors = ["Jamie Quigley <jamie@quigley.xyz>"]
 license = "MPL-2.0"
