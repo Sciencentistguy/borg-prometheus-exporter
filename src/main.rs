@@ -9,14 +9,14 @@ use chrono::{Local, NaiveDateTime, TimeZone};
 use eyre::Context;
 use eyre::Result;
 use once_cell::sync::Lazy;
-use structopt::StructOpt;
+use clap::Parser;
 use tracing::Level;
 use tracing::*;
 use warp::Filter;
 
 use crate::config::Config;
 
-static OPTIONS: Lazy<Opt> = Lazy::new(Opt::from_args);
+static OPTIONS: Lazy<Opt> = Lazy::new(Opt::parse);
 static CONFIG: Lazy<Config> = Lazy::new(|| {
     Config::open_or_create().unwrap_or_else(|e| {
         error!(error = ?e, "An error ocurred while opening config file");
@@ -183,7 +183,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-#[derive(Debug, StructOpt)]
+#[derive(Debug, Parser)]
 struct Opt {
     /// The configuration file, in YAML
     config_file: PathBuf,
