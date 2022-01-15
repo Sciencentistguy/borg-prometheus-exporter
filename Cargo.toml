@@ -10,7 +10,7 @@ repository = "https://github.com/Sciencentistguy/borg-prometheus-exporter"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-better-panic = "0.2.0"
+better-panic = "0.3.0"
 chrono = "0.4.19"
 clap = { version = "3.0.7", features = ["derive"] }
 eyre = "0.6.5"
